@@ -1,4 +1,4 @@
-## :Authors: John Novak
+## :Authors: John Novak, Matt Cavalier (Added Unsafe modifications)
 ##
 ## This is a *curses* inspired simple terminal library that aims to make
 ## writing cross-platform text mode applications easier. The main features are:
@@ -612,17 +612,17 @@ type
     currBg: BackgroundColor
     currFg: ForegroundColor
     currStyle: set[Style]
-    currX: Natural
-    currY: Natural
+    currX: int
+    currY: int
 
-proc `[]=`*(tb: var TerminalBuffer, x, y: Natural, ch: TerminalChar) =
+proc `[]=`*(tb: var TerminalBuffer, x, y: int, ch: TerminalChar) =
   ## Index operator to write a character into the terminal buffer at the
   ## specified location. Does nothing if the location is outside of the
   ## extents of the terminal buffer.
   if x < tb.width and y < tb.height:
     tb.buf[tb.width * y + x] = ch
 
-proc `[]`*(tb: TerminalBuffer, x, y: Natural): TerminalChar =
+proc `[]`*(tb: TerminalBuffer, x, y: int): TerminalChar =
   ## Index operator to read a character from the terminal buffer at the
   ## specified location. Returns nil if the location is outside of the extents
   ## of the terminal buffer.
@@ -630,7 +630,7 @@ proc `[]`*(tb: TerminalBuffer, x, y: Natural): TerminalChar =
     result = tb.buf[tb.width * y + x]
 
 
-proc fill*(tb: var TerminalBuffer, x1, y1, x2, y2: Natural, ch: string = " ") =
+proc fill*(tb: var TerminalBuffer, x1, y1, x2, y2: int, ch: string = " ") =
   ## Fills a rectangular area with the `ch` character using the current text
   ## attributes. The rectangle is clipped to the extends of the terminal
   ## buffer and the call can never fail.
@@ -652,7 +652,7 @@ proc clear*(tb: var TerminalBuffer, ch: string = " ") =
   ## the `fgNone` and `bgNone` attributes.
   tb.fill(0, 0, tb.width-1, tb.height-1, ch)
 
-proc initTerminalBuffer(tb: var TerminalBuffer, width, height: Natural) =
+proc initTerminalBuffer(tb: var TerminalBuffer, width, height: int) =
   ## Initializes a new terminal buffer object of a fixed `width` and `height`.
   tb.width = width
   tb.height = height
@@ -661,24 +661,24 @@ proc initTerminalBuffer(tb: var TerminalBuffer, width, height: Natural) =
   tb.currFg = fgNone
   tb.currStyle = {}
 
-proc newTerminalBuffer*(width, height: Natural): TerminalBuffer =
+proc newTerminalBuffer*(width, height: int): TerminalBuffer =
   ## Creates a new terminal buffer of a fixed `width` and `height`.
   var tb = new TerminalBuffer
   tb.initTerminalBuffer(width, height)
   tb.clear()
   result = tb
 
-func width*(tb: TerminalBuffer): Natural =
+func width*(tb: TerminalBuffer): int =
   ## Returns the width of the terminal buffer.
   result = tb.width
 
-func height*(tb: TerminalBuffer): Natural =
+func height*(tb: TerminalBuffer): int =
   ## Returns the height of the terminal buffer.
   result = tb.height
 
 proc copyFrom*(tb: var TerminalBuffer,
-               src: TerminalBuffer, srcX, srcY, width, height: Natural,
-               destX, destY: Natural) =
+               src: TerminalBuffer, srcX, srcY, width, height: int,
+               destX, destY: int) =
   ## Copies the contents of the `src` terminal buffer into this one.
   ## A rectangular area of dimension `width` and `height` is copied from
   ## the position `srcX` and `srcY` in the source buffer to the position
@@ -716,16 +716,16 @@ proc newTerminalBufferFrom*(src: TerminalBuffer): TerminalBuffer =
   tb.copyFrom(src)
   result = tb
 
-proc setCursorPos*(tb: var TerminalBuffer, x, y: Natural) =
+proc setCursorPos*(tb: var TerminalBuffer, x, y: int) =
   ## Sets the current cursor position.
   tb.currX = x
   tb.currY = y
 
-proc setCursorXPos*(tb: var TerminalBuffer, x: Natural) =
+proc setCursorXPos*(tb: var TerminalBuffer, x: int) =
   ## Sets the current x cursor position.
   tb.currX = x
 
-proc setCursorYPos*(tb: var TerminalBuffer, y: Natural) =
+proc setCursorYPos*(tb: var TerminalBuffer, y: int) =
   ## Sets the current y cursor position.
   tb.currY = y
 
@@ -746,15 +746,15 @@ proc setStyle*(tb: var TerminalBuffer, style: set[Style]) =
   ## Sets the current style flags.
   tb.currStyle = style
 
-func getCursorPos*(tb: TerminalBuffer): tuple[x: Natural, y: Natural] =
+func getCursorPos*(tb: TerminalBuffer): tuple[x: int, y: int] =
   ## Returns the current cursor position.
   result = (tb.currX, tb.currY)
 
-func getCursorXPos*(tb: TerminalBuffer): Natural =
+func getCursorXPos*(tb: TerminalBuffer): int =
   ## Returns the current x cursor position.
   result = tb.currX
 
-func getCursorYPos*(tb: TerminalBuffer): Natural =
+func getCursorYPos*(tb: TerminalBuffer): int =
   ## Returns the current y cursor position.
   result = tb.currY
 
@@ -777,7 +777,7 @@ proc resetAttributes*(tb: var TerminalBuffer) =
   tb.setForegroundColor(fgWhite)
   tb.setStyle({})
 
-proc write*(tb: var TerminalBuffer, x, y: Natural, s: string) =
+proc write*(tb: var TerminalBuffer, x, y: int, s: string) =
   ## Writes `s` into the terminal buffer at the specified position using
   ## the current text attributes. Lines do not wrap and attempting to write
   ## outside the extents of the buffer will not raise an error; the output
@@ -826,10 +826,10 @@ proc setAttribs(c: TerminalChar) =
       gCurrStyle = c.style
       setStyle(gCurrStyle)
 
-proc setPos(x, y: Natural) =
+proc setPos(x, y: int) =
   terminal.setCursorPos(x, y)
 
-proc setXPos(x: Natural) =
+proc setXPos(x: int) =
   terminal.setCursorXPos(x)
 
 
@@ -855,7 +855,7 @@ proc displayFull(tb: TerminalBuffer) =
 proc displayDiff(tb: TerminalBuffer) =
   var
     buf = ""
-    bufXPos, bufYPos: Natural
+    bufXPos, bufYPos: int
     currXPos = -1
     currYPos = -1
 
@@ -1021,37 +1021,37 @@ type BoxBuffer* = ref object
   ## rectangles into the buffer, the overlapping lines will get automatically
   ## connected by placing the appropriate UTF-8 symbols at the corner and
   ## junction points. The results can then be written to a terminal buffer.
-  width: Natural
-  height: Natural
+  width: int
+  height: int
   buf: seq[BoxChar]
 
-proc newBoxBuffer*(width, height: Natural): BoxBuffer =
+proc newBoxBuffer*(width, height: int): BoxBuffer =
   ## Creates a new box buffer of a fixed `width` and `height`.
   result = new BoxBuffer
   result.width = width
   result.height = height
   newSeq(result.buf, width * height)
 
-func width*(bb: BoxBuffer): Natural =
+func width*(bb: BoxBuffer): int =
   ## Returns the width of the box buffer.
   result = bb.width
 
-func height*(bb: BoxBuffer): Natural =
+func height*(bb: BoxBuffer): int =
   ## Returns the height of the box buffer.
   result = bb.height
 
-proc `[]=`(bb: var BoxBuffer, x, y: Natural, c: BoxChar) =
+proc `[]=`(bb: var BoxBuffer, x, y: int, c: BoxChar) =
   if x < bb.width and y < bb.height:
     bb.buf[bb.width * y + x] = c
 
-func `[]`(bb: BoxBuffer, x, y: Natural): BoxChar =
+func `[]`(bb: BoxBuffer, x, y: int): BoxChar =
   if x < bb.width and y < bb.height:
     result = bb.buf[bb.width * y + x]
 
 
 proc copyFrom*(bb: var BoxBuffer,
-               src: BoxBuffer, srcX, srcY, width, height: Natural,
-               destX, destY: Natural) =
+               src: BoxBuffer, srcX, srcY, width, height: int,
+               destX, destY: int) =
   ## Copies the contents of the `src` box buffer into this one.
   ## A rectangular area of dimension `width` and `height` is copied from
   ## the position `srcX` and `srcY` in the source buffer to the position
@@ -1089,7 +1089,7 @@ proc newBoxBufferFrom*(src: BoxBuffer): BoxBuffer =
   result = bb
 
 
-proc drawHorizLine*(bb: var BoxBuffer, x1, x2, y: Natural,
+proc drawHorizLine*(bb: var BoxBuffer, x1, x2, y: int,
                     doubleStyle: bool = false, connect: bool = true) =
   ## Draws a horizontal line into the box buffer. Set `doubleStyle` to `true`
   ## to draw double lines. Set `connect` to `true` to connect overlapping
@@ -1120,7 +1120,7 @@ proc drawHorizLine*(bb: var BoxBuffer, x1, x2, y: Natural,
       bb[x,y] = h
 
 
-proc drawVertLine*(bb: var BoxBuffer, x, y1, y2: Natural,
+proc drawVertLine*(bb: var BoxBuffer, x, y1, y2: int,
                    doubleStyle: bool = false, connect: bool = true) =
   ## Draws a vertical line into the box buffer. Set `doubleStyle` to `true` to
   ## draw double lines. Set `connect` to `true` to connect overlapping lines.
@@ -1150,7 +1150,7 @@ proc drawVertLine*(bb: var BoxBuffer, x, y1, y2: Natural,
       bb[x,y] = v
 
 
-proc drawRect*(bb: var BoxBuffer, x1, y1, x2, y2: Natural,
+proc drawRect*(bb: var BoxBuffer, x1, y1, x2, y2: int,
                doubleStyle: bool = false, connect: bool = true) =
   ## Draws a rectangle into the box buffer. Set `doubleStyle` to `true` to
   ## draw double lines. Set `connect` to `true` to connect overlapping lines.
@@ -1296,7 +1296,7 @@ macro write*(tb: var TerminalBuffer, args: varargs[typed]): untyped =
       result.add(newCall(bindSym"writeProcessArg", tb, item))
 
 
-proc drawHorizLine*(tb: var TerminalBuffer, x1, x2, y: Natural,
+proc drawHorizLine*(tb: var TerminalBuffer, x1, x2, y: int,
                     doubleStyle: bool = false) =
   ## Convenience method to draw a single horizontal line into a terminal
   ## buffer directly.
@@ -1304,7 +1304,7 @@ proc drawHorizLine*(tb: var TerminalBuffer, x1, x2, y: Natural,
   bb.drawHorizLine(x1, x2, y, doubleStyle)
   tb.write(bb)
 
-proc drawVertLine*(tb: var TerminalBuffer, x, y1, y2: Natural,
+proc drawVertLine*(tb: var TerminalBuffer, x, y1, y2: int,
                    doubleStyle: bool = false) =
   ## Convenience method to draw a single vertical line into a terminal buffer
   ## directly.
@@ -1312,7 +1312,7 @@ proc drawVertLine*(tb: var TerminalBuffer, x, y1, y2: Natural,
   bb.drawVertLine(x, y1, y2, doubleStyle)
   tb.write(bb)
 
-proc drawRect*(tb: var TerminalBuffer, x1, y1, x2, y2: Natural,
+proc drawRect*(tb: var TerminalBuffer, x1, y1, x2, y2: int,
                doubleStyle: bool = false) =
   ## Convenience method to draw a rectangle into a terminal buffer directly.
   var bb = newBoxBuffer(tb.width, tb.height)

@@ -1,8 +1,8 @@
 # Package
 
 version       = "0.1.0"
-author        = "John Novak <john@johnnovak.net>"
-description   = "A curses inspired simple cross-platform console library for Nim"
+author        = "John Novak <john@johnnovak.net>, Matt Cavalier<matt@cavalier.dev>"
+description   = "A fork of John Novak (john@johnnovak.net)'s illwill package that is less safe numbers wise"
 license       = "WTFPL"
 
 skipDirs = @["doc", "examples", "img"]
